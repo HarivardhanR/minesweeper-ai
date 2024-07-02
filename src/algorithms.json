@@ -1,0 +1,20 @@
+[
+  {
+    "id": "rs",
+    "name": "Random Search",
+    "description": "This algorithm makes random moves on the Minesweeper board.",
+    "additionalMessage": "No specific strategy is employed, only random guesses."
+  },
+  {
+    "id": "neu",
+    "name": "Neuro Evolution (untrained) [yet to be implemented]",
+    "description": "This algorithm uses a neural network that has not been trained. It gets better over time.",
+    "additionalMessage": "It relies on initial weights and is likely to perform suboptimally."
+  },
+  {
+    "id": "net",
+    "name": "Neuro Evolution (trained) [yet to be implemented]",
+    "description": "This algorithm uses a neural network that has been trained.",
+    "additionalMessage": "It should perform better than the untrained version."
+  }
+]

@@ -13,6 +13,8 @@ import { randomSearchAI } from "./AIutils/randomSearchAI";
 // import { neatAI } from "./AIutils/neatAI";
 import "./App.css";
 
+import algorithms from "./algorithms.json";
+
 const App = () => {
   const [boards, setBoards] = useState([]);
   const [algorithmClicked, setAlgorithmClicked] = useState(null);
@@ -57,7 +59,7 @@ const App = () => {
       algorithmClicked
     ) {
       let move;
-      if (algorithmClicked === "Random Search") {
+      if (algorithmClicked === "rs") {
         move = randomSearchAI(boards[0].board, boards[0].revealed);
       }
       // Add other algorithms here...
@@ -107,7 +109,7 @@ const App = () => {
           !boards[0].gameWon
         ) {
           let move;
-          if (algorithmClicked === "Random Search") {
+          if (algorithmClicked === "rs") {
             move = randomSearchAI(boards[0].board, boards[0].revealed);
           }
           // Add other algorithms here...
@@ -151,21 +153,17 @@ const App = () => {
           <tbody>
             <tr>
               <td>
-                <button onClick={() => handleAlgorithmClicked("Random Search")}>
+                <button onClick={() => handleAlgorithmClicked("rs")}>
                   Random Search
                 </button>
               </td>
               <td>
-                <button
-                  onClick={() => handleAlgorithmClicked("NeuroEvolutionU")}
-                >
+                <button onClick={() => handleAlgorithmClicked("neu")}>
                   Neuro Evolution(untrained)
                 </button>
               </td>
               <td>
-                <button
-                  onClick={() => handleAlgorithmClicked("NeuroEvolutionT")}
-                >
+                <button onClick={() => handleAlgorithmClicked("net")}>
                   Neuro Evolution(trained)
                 </button>
               </td>
@@ -243,7 +241,34 @@ const App = () => {
       </div>
       <div className="main-body">
         <div className="algorithm-info">
-          {algorithmClicked && <p>Algorithm: {algorithmClicked}</p>}
+          {algorithmClicked && (
+            <>
+              {algorithms.find((algo) => algo.id === algorithmClicked) ? (
+                <>
+                  <div>
+                    Algorithm:{" "}
+                    {
+                      algorithms.find((algo) => algo.id === algorithmClicked)
+                        .name
+                    }
+                  </div>
+
+                  <div>
+                    {
+                      algorithms.find((algo) => algo.id === algorithmClicked)
+                        .description
+                    }
+                  </div>
+                  <div>
+                    {
+                      algorithms.find((algo) => algo.id === algorithmClicked)
+                        .additionalMessage
+                    }
+                  </div>
+                </>
+              ) : null}
+            </>
+          )}
         </div>
         <div className="minesweeper-board">
           {boards.length > 0 && (
