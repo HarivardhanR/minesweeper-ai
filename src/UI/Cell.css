@@ -1,0 +1,24 @@
+.cell {
+  width: 30px;
+  height: 30px;
+  border: 1px solid #ccc;
+  text-align: center;
+  line-height: 30px;
+  cursor: pointer;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.cell.revealed {
+  background-color: #eee;
+}
+
+.cell.flagged {
+  background-color: #ff0;
+}
+
+.cell svg {
+  width: 20px;
+  height: 20px;
+}

@@ -1,0 +1,8 @@
+.board {
+  display: inline-block;
+  padding-top: 20px;
+}
+
+.row {
+  display: flex;
+}
