@@ -14,19 +14,33 @@ import { randomSearchAI } from "./AIutils/randomSearchAI";
 import "./App.css";
 
 import algorithms from "./algorithms.json";
+import { evolvePopulation } from "./AIutils/neuroEvolution";
 
 const App = () => {
   const [boards, setBoards] = useState([]);
-  const [algorithmClicked, setAlgorithmClicked] = useState(null);
+  const [savedBoards, setSavedBoards] = useState([]);
+  const [algorithmClicked, setAlgorithmClicked] = useState("human");
   const [isAlgorithmPlaying, setIsAlgorithmPlaying] = useState(false);
-  const [intervalDelay, setIntervalDelay] = useState(1000);
+  const [isAlgorithmRunning, setIsAlgorithmRunning] = useState(false);
+  const [intervalDelay, setIntervalDelay] = useState(100);
   const [rows, setRows] = useState(10);
   const [cols, setCols] = useState(10);
   const [mines, setMines] = useState(10);
+  const [population, setPopulation] = useState(1);
+  const [generation, setGeneration] = useState(1);
+  const [generationStats, setGenerationStats] = useState([]);
+  const [enableAnimations, setEnableAnimations] = useState(true);
   const rafRef = useRef(null);
   const timeoutRef = useRef(null);
 
+  // const disposeBoards = useCallback(() => {
+  //   boards.forEach((board) => {
+  //     board.brain.dispose();
+  //   });
+  // }, [boards]);
+
   const initializeBoards = useCallback((rows, cols, mines, count) => {
+    // disposeBoards();
     const initialBoards = Array.from(
       { length: count },
       () => new Board(rows, cols, mines)
@@ -35,19 +49,41 @@ const App = () => {
   }, []);
 
   useEffect(() => {
-    initializeBoards(rows, cols, mines, 1);
-  }, [initializeBoards, rows, cols, mines]);
+    initializeBoards(rows, cols, mines, population);
+  }, [initializeBoards, rows, cols, mines, population]);
 
-  const handleAlgorithmClicked = useCallback((algorithm) => {
-    setAlgorithmClicked(algorithm);
-  }, []);
+  const handleAlgorithmClicked = useCallback(
+    (algorithm) => {
+      setAlgorithmClicked(algorithm);
+      if (algorithm === "human") {
+        initializeBoards(rows, cols, mines, 1);
+        setIsAlgorithmPlaying(false);
+
+        setPopulation(1);
+        setGeneration(1);
+        setGenerationStats([]);
+        setEnableAnimations(true);
+      } else {
+        setIsAlgorithmPlaying(true);
+        setEnableAnimations(false);
+        setPopulation(2);
+        initializeBoards(rows, cols, mines, 2);
+      }
+      setIsAlgorithmRunning(false);
+      setGeneration(1);
+      setGenerationStats([]);
+    },
+    [rows, cols, mines, initializeBoards]
+  );
 
   const handleNewGame = useCallback(() => {
-    initializeBoards(rows, cols, mines, 1);
-  }, [initializeBoards, rows, cols, mines]);
+    initializeBoards(rows, cols, mines, population);
+    setGenerationStats([]);
+  }, [initializeBoards, rows, cols, mines, population]);
 
   const handleAutoPlayClick = useCallback(() => {
-    setIsAlgorithmPlaying((prevState) => !prevState);
+    // setIsAlgorithmPlaying((prevState) => !prevState);
+    setIsAlgorithmRunning((prevState) => !prevState);
   }, []);
 
   const handleNextMoveClick = useCallback(() => {
@@ -55,12 +91,18 @@ const App = () => {
       boards.length > 0 &&
       !boards[0].gameOver &&
       !boards[0].gameWon &&
-      !isAlgorithmPlaying &&
+      !isAlgorithmRunning &&
       algorithmClicked
     ) {
       let move;
       if (algorithmClicked === "rs") {
         move = randomSearchAI(boards[0].board, boards[0].revealed);
+      } else if (algorithmClicked === "neu") {
+        move = boards[0].brain.getPredictions(
+          boards[0].board,
+          boards[0].revealed
+        );
+        console.log(move);
       }
       // Add other algorithms here...
       if (move) {
@@ -68,7 +110,7 @@ const App = () => {
         setBoards([...boards]);
       }
     }
-  }, [boards, isAlgorithmPlaying, algorithmClicked]);
+  }, [boards, isAlgorithmRunning, algorithmClicked]);
 
   const handleIntervalChange = useCallback((e) => {
     setIntervalDelay(Number(e.target.value));
@@ -100,27 +142,79 @@ const App = () => {
 
   useEffect(() => {
     const gameLoop = () => {
-      if (boards && boards.length > 0) {
-        if (
-          isAlgorithmPlaying &&
-          algorithmClicked &&
-          boards.length > 0 &&
-          !boards[0].gameOver &&
-          !boards[0].gameWon
-        ) {
-          let move;
+      if (isAlgorithmPlaying && algorithmClicked && isAlgorithmRunning) {
+        if (boards && boards.length > 0) {
+          let completedBoards = [];
+          boards.forEach((board, index) => {
+            if (!board.gameOver && !board.gameWon) {
+              let move;
+              if (algorithmClicked === "rs") {
+                move = randomSearchAI(board.board, board.revealed);
+              } else if (algorithmClicked === "neu") {
+                move = board.brain.getPredictions(board.board, board.revealed);
+              }
+              // Add other algorithms here...
+              if (move) {
+                board.handleCellClick(move.row, move.col);
+              }
+              if (board.gameOver || board.gameWon) {
+                completedBoards.push(board);
+              }
+            } else {
+              completedBoards.push(board);
+            }
+          });
+
+          // Update saved boards
+          setSavedBoards((prev) => [...prev, ...completedBoards]);
+
+          // Defer setting remaining boards to next animation frame
+          requestAnimationFrame(() => {
+            const remainingBoards = boards.filter(
+              (board) => !board.gameOver && !board.gameWon
+            );
+            setBoards(remainingBoards);
+          });
+        } else {
+          const wonBoardsCount = savedBoards.filter(
+            (board) => board.gameWon
+          ).length;
+          setGenerationStats((prev) => [
+            ...prev,
+            {
+              generation,
+              wonBoardsCount,
+              population,
+            },
+          ]);
+          setGeneration(generation + 1);
+
           if (algorithmClicked === "rs") {
-            move = randomSearchAI(boards[0].board, boards[0].revealed);
-          }
-          // Add other algorithms here...
-          if (move) {
-            boards[0].handleCellClick(move.row, move.col);
-            setBoards([...boards]);
+            const newBoards = [];
+            while (newBoards.length < population) {
+              const child = new Board(rows, cols, mines);
+              newBoards.push(child);
+            }
+            setBoards(newBoards);
+            for (let i = 0; i < population; i++) {
+              savedBoards[i].brain.dispose();
+            }
+            savedBoards.length = 0;
+          } else if (algorithmClicked === "neu") {
+            // Generate new boards if all current boards are completed
+            const newBoards = evolvePopulation(
+              population,
+              savedBoards,
+              rows,
+              cols,
+              mines
+            );
+            // console.log(newBoards);
+            setBoards(newBoards);
           }
         }
-
-        let updatedBoards = Object.assign([], boards);
-        setBoards(updatedBoards);
+      } else {
+        setBoards([...boards]);
       }
     };
 
@@ -135,14 +229,28 @@ const App = () => {
       cancelAnimationFrame(rafRef.current);
       clearTimeout(timeoutRef.current);
     };
-  }, [isAlgorithmPlaying, algorithmClicked, intervalDelay, boards]);
+  }, [
+    isAlgorithmPlaying,
+    isAlgorithmRunning,
+    algorithmClicked,
+    intervalDelay,
+    boards,
+    savedBoards,
+    population,
+    rows,
+    cols,
+    mines,
+    generation,
+  ]);
 
   const maxMines = useMemo(() => Math.floor(rows * cols * 0.4), [rows, cols]);
 
   return (
     <div className="App">
-      {boards.length > 0 && boards[0].gameWon ? <Confetti /> : null}
-      {boards.length > 0 && boards[0].gameOver ? (
+      {boards.length > 0 && boards[0].gameWon && enableAnimations ? (
+        <Confetti />
+      ) : null}
+      {boards.length > 0 && boards[0].gameOver && enableAnimations ? (
         <BombDrop numBombs={mines} />
       ) : null}
       <div className="main-header">
@@ -152,6 +260,11 @@ const App = () => {
         <table>
           <tbody>
             <tr>
+              <td>
+                <button onClick={() => handleAlgorithmClicked("human")}>
+                  Human
+                </button>
+              </td>
               <td>
                 <button onClick={() => handleAlgorithmClicked("rs")}>
                   Random Search
@@ -181,15 +294,21 @@ const App = () => {
               <td>
                 <button
                   onClick={handleAutoPlayClick}
-                  disabled={algorithmClicked === null}
+                  disabled={
+                    algorithmClicked === null || algorithmClicked === "human"
+                  }
                 >
-                  {isAlgorithmPlaying ? "Stop AI" : "Auto Play"}
+                  {isAlgorithmRunning ? "Pause AI" : "Auto Play"}
                 </button>
               </td>
               <td>
                 <button
                   onClick={handleNextMoveClick}
-                  disabled={algorithmClicked == null || isAlgorithmPlaying}
+                  disabled={
+                    algorithmClicked == null ||
+                    algorithmClicked === "human" ||
+                    isAlgorithmRunning
+                  }
                 >
                   Next Move
                 </button>
@@ -234,6 +353,18 @@ const App = () => {
                     onChange={(e) => setMines(Number(e.target.value))}
                   />
                 </td>
+                <td>
+                  <label>Population: {population}</label>
+                  <br />
+                  <input
+                    disabled={algorithmClicked === "human"}
+                    type="range"
+                    min={2}
+                    max={500}
+                    value={population}
+                    onChange={(e) => setPopulation(Number(e.target.value))}
+                  />
+                </td>
               </tr>
             </tbody>
           </table>
@@ -269,46 +400,61 @@ const App = () => {
               ) : null}
             </>
           )}
+          {generationStats.length > 0 && (
+            <>
+              <div className="generation-info">
+                {generationStats.map((info, index) => (
+                  <div
+                    key={index}
+                  >{`Gen ${info.generation}: ${info.wonBoardsCount}/${info.population} Won`}</div>
+                ))}
+              </div>
+            </>
+          )}
         </div>
         <div className="minesweeper-board">
           {boards.length > 0 && (
             <BoardUI
               boardObj={boards[0]}
-              isAlgorithmPlaying={isAlgorithmPlaying}
+              isAlgorithmPlaying={
+                isAlgorithmPlaying || algorithmClicked !== "human"
+              }
             />
           )}
         </div>
         <div className="algorithm-moves-info">
-          {algorithmClicked && (
+          {algorithmClicked && algorithmClicked !== "human" && (
             <p>
               AI Move Delay: {intervalDelay} ms
               <br />
               <input
                 type="range"
-                min={0}
+                min={100}
                 max={5000}
-                step={100}
+                step={10}
                 value={intervalDelay}
                 onChange={handleIntervalChange}
               />
             </p>
           )}
           {boards.length > 0 && (
-            <div className="moves-played">
-              <h3>Moves Played</h3>
-              {boards[0].movesPlayed.map((move, index) => (
-                <div key={index}>{`(${move.row}, ${move.col})`}</div>
-              ))}
-            </div>
+            <>
+              {algorithmClicked === "human" ? null : (
+                <div>
+                  <h3>Fitness Score: {boards[0].fitness}</h3>
+                </div>
+              )}
+
+              <div className="moves-played">
+                <h3>Moves Played</h3>
+                {boards[0].movesPlayed.map((move, index) => (
+                  <div key={index}>{`(${move.row}, ${move.col})`}</div>
+                ))}
+              </div>
+            </>
           )}
         </div>
       </div>
-      {boards.length > 0 && boards[0].gameOver && (
-        <div className="game-status">Game Over</div>
-      )}
-      {boards.length > 0 && boards[0].gameWon && (
-        <div className="game-status">You Won!</div>
-      )}
     </div>
   );
 };

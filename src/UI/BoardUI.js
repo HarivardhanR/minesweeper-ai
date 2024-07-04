@@ -42,6 +42,9 @@ const BoardUI = ({ boardObj, isAlgorithmPlaying }) => {
           ))}
         </div>
       ))}
+
+      {boardObj.gameOver && <div className="game-status">Game Over</div>}
+      {boardObj.gameWon && <div className="game-status">You Won!</div>}
     </div>
   );
 };

@@ -39,9 +39,8 @@ body {
 .minesweeper-board {
   display: flex;
   justify-content: center;
-  align-items: center;
+  /* align-items: center; */
 }
-
 .main-body {
   display: flex;
   flex-direction: row;

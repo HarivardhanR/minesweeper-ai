@@ -1,3 +1,5 @@
+import Brain from "../NeuralNetwork/Brain";
+
 class Board {
   constructor(rows, cols, mines) {
     this.rows = rows;
@@ -9,8 +11,12 @@ class Board {
     this.gameOver = false;
     this.gameWon = false;
     this.movesPlayed = [];
+    this.fitness = 0;
 
     this.initializeBoard();
+    this.brain = new Brain(this.rows, this.cols, this.mines);
+    // this.prepareInputs();
+    // this.getPredictions();
   }
 
   initializeBoard = () => {
@@ -57,6 +63,11 @@ class Board {
     let newRevealed = this.revealed.slice();
     newRevealed[row][col] = true;
     this.revealed = newRevealed;
+
+    if (typeof this.board[row][col] === "number") {
+      this.fitness += this.board[row][col];
+    }
+
     if (this.board[row][col] === 0) {
       for (let r = row - 1; r <= row + 1; r++) {
         for (let c = col - 1; c <= col + 1; c++) {

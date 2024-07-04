@@ -7,7 +7,7 @@
   },
   {
     "id": "neu",
-    "name": "Neuro Evolution (untrained) [yet to be implemented]",
+    "name": "Neuro Evolution (untrained) [in progress]",
     "description": "This algorithm uses a neural network that has not been trained. It gets better over time.",
     "additionalMessage": "It relies on initial weights and is likely to perform suboptimally."
   },
